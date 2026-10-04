@@ -54,7 +54,7 @@
 - [x] B：纵向缩进图与按问题分组时间轴，保留总览。
 - [x] C：英文默认、顶部导航、搜索、详情和移动交互。
 - [x] D：多问题长间隔 fixture、单元/浏览器回归、实际截图和双语使用说明。
-- [ ] E：检查上传内容，创建并推送 GitHub private repo，核对远端。
+- [x] E：检查上传内容，创建并推送 GitHub private repo，核对远端。
 
 编码继续由 GPT 6.1 sol 子 agent 按模块分工，主 agent 负责接口衔接、验收和仓库上传。执行完成后在本页追加具体实现与验证结果；未通过的项目不提前勾选。
 
@@ -85,3 +85,10 @@
 [桌面实际界面](screenshots/v2-desktop.png) · [多轮次界面](screenshots/v2-many-turns.png) · [390px](screenshots/v2-mobile-390.png) · [320px](screenshots/v2-mobile-320.png)。这些截图使用合成数据，由生产构建在真实 Chrome 中渲染。
 
 依赖安装时官方 registry TLS 失败，使用单次 `--registry=https://registry.npmmirror.com` 完成依赖恢复及打包验证；未修改全局配置。首版记录里的已知边界继续适用，未宣称补齐 provider attempt、内部结果组装或历史未知阶段。
+
+
+### GitHub 交付
+
+2026-10-05 已创建并推送 [zzy2008/pi-loop-observer](https://github.com/zzy2008/pi-loop-observer)，`gh repo view` 确认 `isPrivate: true`，默认分支为 `codex/initial-release`。首次代码提交 `96e62fe` 的本地与远端 SHA 完全一致；本记录随后一并同步。
+
+上传内容为源代码、设计文档、合成测试、锁文件及验收截图。`node_modules`、构建缓存、测试产物、个人会话/数据库、runtime 凭证和环境文件不在 Git 跟踪列表中。
