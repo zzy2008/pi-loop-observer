@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1050" viewBox="0 0 1440 1050" role="img" aria-labelledby="title description">
+<title id="title">Pi Loop Observer 系统架构</title><desc id="description">Pi 官方事件经过适配、异步队列、本地持久化与 SSE，驱动共用状态模型的实时图形和历史回放。图形界面只读，不向 Pi 发出控制命令。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9a92b6"/></marker></defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;fill:#303344}.muted{fill:#7d8295}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.label{font-size:12px;letter-spacing:1.4px}.small{font-size:13px}.body{font-size:15px}.heading{font-size:18px;font-weight:600}.wire{fill:none;stroke:#9a92b6;stroke-width:1.6;marker-end:url(#arrow)}</style><rect width="1440" height="1050" fill="#f7f8fa"/>
+<text x="48" y="44" class="label muted">PI LOOP OBSERVER / ARCHITECTURE</text>
+<text x="48" y="92" class="heading">一份执行记录，驱动实时观察与历史回放</text>
+<text x="48" y="121" class="body muted">独立扩展 · 本地优先 · 只读观察 · 阶段级回放</text>
+<rect x="1163" y="68" width="228" height="32" rx="6" fill="#eeeafa" stroke="#e4dcf5"/>
+<text x="1178" y="89" class="small" style="fill:#7868a5">设计方案 / 尚未接入真实 Pi</text>
+<rect x="48" y="172" width="330" height="612" rx="14" fill="#f0f2f6" stroke="#e2e5ed"/>
+<rect x="439" y="172" width="384" height="612" rx="14" fill="#f0f2f6" stroke="#e2e5ed"/>
+<rect x="884" y="172" width="508" height="612" rx="14" fill="#f0f2f6" stroke="#e2e5ed"/>
+<text x="69" y="205" class="label muted">01  PI PROCESS</text>
+<text x="69" y="234" class="heading">在原有终端中工作</text>
+<text x="460" y="205" class="label muted">02  LOCAL SERVICE</text>
+<text x="460" y="234" class="heading">记录事实，提供可恢复的数据流</text>
+<text x="905" y="205" class="label muted">03  READ-ONLY BROWSER</text>
+<text x="905" y="234" class="heading">图形化理解一次执行</text>
+<rect x="69" y="268" width="288" height="104" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="86" y="293" class="label muted">EXISTING RUNTIME</text>
+<text x="86" y="318" class="heading">Pi / Agent Loop</text>
+<text x="86" y="343" class="small muted">用户输入、模型、工具、会话事件</text>
+<path class="wire" d="M 213 372 L 213 399"/>
+<text x="225" y="391" class="small muted">官方生命周期事件</text>
+<rect x="69" y="402" width="288" height="117" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="86" y="427" class="label muted">EXTENSION</text>
+<text x="86" y="452" class="heading">事件适配器</text>
+<text x="86" y="477" class="small muted">输入用途 / span 身份 / 事件序号</text>
+<text x="86" y="500" class="small muted">记录可观察阶段，不修改执行</text>
+<path class="wire" d="M 213 519 L 213 548"/>
+<rect x="69" y="551" width="288" height="94" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="86" y="581" class="heading">有界异步队列</text>
+<text x="86" y="606" class="small muted">合并高频增量，保留状态边界</text>
+<text x="86" y="629" class="small muted">故障不阻断 agent 主流程</text>
+<text x="69" y="689" class="small muted">steer → 当前问题的介入标记</text>
+<text x="69" y="717" class="small muted">follow-up → 排队中的新问题</text>
+<text x="69" y="745" class="small muted">子 agent → 第一版作为工具节点</text>
+<rect x="460" y="268" width="342" height="94" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="477" y="298" class="heading">接收与校验</text>
+<text x="477" y="323" class="small muted">幂等接收 / schema 版本</text>
+<text x="477" y="346" class="small muted">确认事件来源和序列</text>
+<path class="wire" d="M 357 598 L 408 598 L 408 314 L 456 314"/>
+<text x="384" y="582" class="small muted">事件批次</text>
+<path class="wire" d="M 631 362 L 631 390"/>
+<rect x="460" y="393" width="342" height="105" rx="9" fill="#f1edfc" stroke="#cfc5ef"/>
+<text x="477" y="418" class="label muted">APPEND FIRST</text>
+<text x="477" y="443" class="heading">持久记录器</text>
+<text x="477" y="468" class="small muted">追加事件日志 + 内容引用</text>
+<text x="477" y="491" class="small muted">大输入输出与事件索引分离</text>
+<path class="wire" d="M 631 498 L 631 525"/>
+<rect x="460" y="528" width="342" height="84" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="477" y="558" class="heading">本地事件存储</text>
+<text x="477" y="583" class="small muted">历史事实 / 游标 / 完整性标记</text>
+<path class="wire" d="M 631 612 L 631 638"/>
+<rect x="460" y="641" width="342" height="99" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="477" y="671" class="heading">查询与订阅</text>
+<text x="477" y="696" class="small muted">SSE：已持久化增量 + 断线补齐</text>
+<text x="477" y="719" class="small muted">HTTP：快照、历史、节点详情</text>
+<rect x="905" y="268" width="466" height="116" rx="9" fill="#f1edfc" stroke="#cfc5ef"/>
+<text x="922" y="293" class="label muted">SHARED MODEL</text>
+<text x="922" y="318" class="heading">统一 Trace Model / Reducer</text>
+<text x="922" y="343" class="small muted">同一组事件 + 同一游标 → 同一状态</text>
+<text x="922" y="366" class="small muted">问题 → turn → 调用节点 → 依赖边</text>
+<path class="wire" d="M 802 688 L 851 688 L 851 326 L 901 326"/>
+<text x="835" y="579" class="small muted">快照 + 增量</text>
+<path class="wire" d="M 1138 384 L 1138 400 L 1017 400 L 1017 415"/>
+<path class="wire" d="M 1138 400 L 1258 400 L 1258 415"/>
+<rect x="905" y="418" width="225" height="113" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="922" y="443" class="label muted">CALL GRAPH</text>
+<text x="922" y="468" class="heading">执行图</text>
+<text x="922" y="493" class="small muted">每次调用独立节点</text>
+<text x="922" y="516" class="small muted">并行分支 / 当前活动</text>
+<rect x="1146" y="418" width="225" height="113" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="1163" y="443" class="label muted">TIMELINE</text>
+<text x="1163" y="468" class="heading">真实时间轴</text>
+<text x="1163" y="493" class="small muted">实际起止 / 重叠关系</text>
+<text x="1163" y="516" class="small muted">阶段游标 / 耗时</text>
+<path class="wire" d="M 1130 474 L 1142 474"/>
+<path class="wire" d="M 1017 531 L 1017 544 L 1090 544 L 1090 559"/>
+<path class="wire" d="M 1258 531 L 1258 544 L 1186 544 L 1186 559"/>
+<rect x="905" y="562" width="466" height="83" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="922" y="592" class="heading">节点详情</text>
+<text x="922" y="617" class="small muted">输入 / 输出 / 可观察阶段 / 原始事件</text>
+<rect x="905" y="672" width="466" height="68" rx="9" fill="#fff" stroke="#e1e4ed"/>
+<text x="922" y="702" class="heading">Live 跟随 / Replay 阶段回放</text>
+<path class="wire" d="M 1369 705 L 1381 705 L 1381 356 L 1374 356" stroke-dasharray="5 4"/>
+<rect x="48" y="820" width="1344" height="173" rx="12" fill="#fff" stroke="#e1e4ed"/>
+<text x="72" y="853" class="label muted">OBSERVABILITY CONTRACT</text>
+<text x="72" y="886" class="heading">执行语义</text>
+<text x="72" y="915" class="body muted">生成工具参数 ≠ 工具执行</text>
+<text x="72" y="943" class="body muted">接到响应头 ≠ 模型请求完成</text>
+<text x="519" y="886" class="heading">问题边界</text>
+<text x="519" y="915" class="body muted">提交与实际生效分别记录</text>
+<text x="519" y="943" class="body muted">缺失、取消和失败分别展示</text>
+<text x="966" y="886" class="heading">只读与回放</text>
+<text x="966" y="915" class="body muted">浏览器不控制 agent</text>
+<text x="966" y="943" class="body muted">回放不重新调用模型或工具</text>
+<text x="48" y="1025" class="small muted">来源：docs/design.md · 2026-10-03</text>
+<text x="970" y="1025" class="small muted">实线：事件与数据流     虚线：切换回放游标</text>
+</svg>

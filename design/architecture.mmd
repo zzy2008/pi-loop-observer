@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph pi[Pi 进程：原有终端]
+        runtime[Pi / Agent Loop]
+        adapter[扩展事件适配器<br/>用途 / 身份 / 序号]
+        queue[有界异步队列<br/>保留边界，合并增量]
+        runtime -->|官方事件| adapter --> queue
+    end
+    subgraph local[本地服务]
+        ingest[幂等接收与校验]
+        recorder[持久记录器]
+        store[(追加事件 + 内容存储)]
+        api[历史与详情查询 / SSE]
+        ingest --> recorder --> store --> api
+    end
+    subgraph browser[只读浏览器]
+        model[统一 Trace Model / Reducer]
+        graph[实际调用展开图]
+        timeline[真实时间轴]
+        detail[输入 / 输出 / 事件详情]
+        replay[Live 跟随 / Replay 游标]
+        model --> graph & timeline
+        graph & timeline --> detail
+        replay -.同一事件流与归约逻辑.-> model
+    end
+    queue -->|事件批次| ingest
+    api -->|快照 + 持久化增量 / 重连补齐| model

@@ -1,0 +1,9 @@
+packages:
+  - .
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  '@earendil-works/pi-coding-agent': false
+  '@google/genai': false
+  protobufjs: false
+autoInstallPeers: false

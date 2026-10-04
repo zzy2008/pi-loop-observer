@@ -1,0 +1,77 @@
+{
+  "name": "pi-loop-observer",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Persistent, local-first visual observer for Pi agent loops",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "packageManager": "pnpm@12.3.4",
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "docs/implementation/compatibility.md",
+    "docs/implementation/runtime-notes.md",
+    "docs/implementation/acceptance.md",
+    "README.zh-CN.md",
+    "docs/implementation/usability-improvements.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/adapter/index.js"
+    ]
+  },
+  "bin": {
+    "pi-loop-observer": "./dist/cli/main.js"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "scripts": {
+    "preview": "node scripts/preview.mjs",
+    "diagram": "python3 scripts/draw_architecture.py",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "test": "pnpm build:node && vitest run",
+    "test:e2e": "pnpm build && playwright test",
+    "build": "pnpm build:node && vite build",
+    "open": "node dist/cli/main.js open",
+    "format": "prettier --write src web test *.config.ts tsconfig*.json",
+    "test:compat": "pnpm build:node && node test/compatibility/pi-1.0.0.mjs && node test/compatibility/observer-sdk.mjs",
+    "build:node": "tsc -p tsconfig.node.json && node scripts/finalize-build.mjs",
+    "test:pack": "pnpm build && node test/packaging/smoke.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.3",
+    "better-sqlite3": "13.0.3",
+    "hono": "4.13.12"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.0.0",
+    "@playwright/test": "1.63.0",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "@xyflow/react": "12.12.0",
+    "prettier": "3.9.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zzy2008/pi-loop-observer.git"
+  },
+  "homepage": "https://github.com/zzy2008/pi-loop-observer#readme",
+  "bugs": {
+    "url": "https://github.com/zzy2008/pi-loop-observer/issues"
+  }
+}
