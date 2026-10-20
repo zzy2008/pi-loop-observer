@@ -2,8 +2,11 @@ import React, { memo, useMemo, useRef, useState, useEffect } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
+  BaseEdge,
+  getSmoothStepPath,
+  type EdgeProps,
   Position,
+  MarkerType,
   PanOnScrollMode,
   type Node,
   type Edge,
@@ -11,11 +14,100 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import type { Projection } from "../../src/model/index.js";
-import { layoutSpans } from "./graph-layout";
-import { nameOf, type DisplayIndex } from "./display-model";
+import { GRAPH_COLUMN_GAP, layoutSpans } from "./graph-layout";
+import { nameOf, scopedName, type DisplayIndex } from "./display-model";
 import { formatDuration, formatTimestamp } from "./timing";
 import { useI18n } from "./i18n";
+import { useTimeLabels } from "./useTimeLabels";
+import { statusLabel } from "./presentation";
 import "./graph-v2.css";
+// Long observed relationships pass above the lane instead of crossing intermediate cards.
+function ObservedEdge(props: EdgeProps) {
+  const { sourceX, sourceY, targetX, targetY } = props;
+  const route = props.data?.route as
+    { right: number; bottom: number; top: number } | undefined;
+  const sameRow = Math.abs(sourceY - targetY) < 1;
+  const detour = sameRow && Math.abs(targetX - sourceX) > GRAPH_COLUMN_GAP + 1;
+  const [path, labelX, labelY] =
+    !sameRow && route
+      ? [
+          `M ${sourceX} ${sourceY} L ${sourceX + 12} ${sourceY} L ${sourceX + 12} ${route.bottom} L ${route.right} ${route.bottom} L ${route.right} ${route.top} L ${targetX - 12} ${route.top} L ${targetX - 12} ${targetY} L ${targetX} ${targetY}`,
+          (sourceX + route.right) / 2,
+          route.bottom,
+        ]
+      : detour
+        ? [
+            `M ${sourceX} ${sourceY} L ${sourceX + 12} ${sourceY} L ${sourceX + 12} ${sourceY - 57} L ${targetX - 12} ${targetY - 57} L ${targetX - 12} ${targetY} L ${targetX} ${targetY}`,
+            (sourceX + targetX) / 2,
+            sourceY - 57,
+          ]
+        : getSmoothStepPath(props);
+  return (
+    <BaseEdge
+      id={props.id}
+      path={path}
+      markerEnd={props.markerEnd}
+      style={props.style}
+      label={props.label}
+      labelX={labelX}
+      labelY={labelY}
+      labelStyle={props.labelStyle}
+      labelBgStyle={props.labelBgStyle}
+    />
+  );
+}
+const edgeTypes = { observed: ObservedEdge };
+
+type NodeKind = "question" | "turn" | "llm" | "tool";
+function NodeIcon({ kind }: { kind: NodeKind }) {
+  const paths: Record<NodeKind, string> = {
+    question:
+      "M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z M7 8h10 M7 12h7",
+    turn: "m12 3 9 5-9 5-9-5 9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5",
+    llm: "M7 7h10v10H7Z M10 10h4v4h-4Z M9 3v4 M15 3v4 M9 17v4 M15 17v4 M3 9h4 M3 15h4 M17 9h4 M17 15h4",
+    tool: "M14 4a6 6 0 0 0-7 7L3 15a3 3 0 0 0 4 4l4-4a6 6 0 0 0 7-7l-4 4-4-4 4-4Z",
+  };
+  return (
+    <svg
+      className="observer-kind-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={paths[kind]} />
+    </svg>
+  );
+}
+function StatusIcon({ state }: { state: string }) {
+  const paths: Record<string, string> = {
+    completed: "m4 8 3 3 5-6",
+    running: "M8 3a5 5 0 1 1-5 5 M8 5v3l2 1",
+    failed: "m5 5 6 6 M11 5l-6 6",
+    cancelled: "M3 8a5 5 0 1 0 10 0 5 5 0 0 0-10 0 M5 11l6-6",
+    interrupted: "M6 4v8 M10 4v8",
+    unknown: "M6 5a2 2 0 1 1 3 2c-1 0-1 1-1 2 M8 12v.1",
+  };
+  return (
+    <svg
+      className="observer-status-icon"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={paths[state] ?? paths.unknown} />
+    </svg>
+  );
+}
+
 export const Graph = memo(function Graph({
   view,
   selected,
@@ -23,6 +115,7 @@ export const Graph = memo(function Graph({
   collapsed,
   onToggleTurn,
   display,
+  animateTime = false,
 }: {
   view: Projection;
   selected?: string;
@@ -30,8 +123,10 @@ export const Graph = memo(function Graph({
   collapsed: Set<string>;
   onToggleTurn: (id: string) => void;
   display?: DisplayIndex;
+  animateTime?: boolean;
 }) {
   const { language, t } = useI18n();
+  const timeLabel = useTimeLabels(animateTime);
   const instance = useRef<ReactFlowInstance<Node, Edge> | null>(null);
   const toolbar = useRef<HTMLDivElement>(null);
   const [questions, setQuestions] = useState<Set<string>>(new Set());
@@ -114,61 +209,128 @@ export const Graph = memo(function Graph({
       span?.name ?? trace?.label ?? t("Unassigned turn", "未关联轮次"),
     );
     const timestamp = span?.start ?? calls.find((s) => s.start)?.start;
+    const kind: NodeKind =
+      row.kind === "call" ? (span?.kind ?? "tool") : row.kind;
+    const kindLabel = {
+      question: t("Question", "问题"),
+      turn: t("Turn", "轮次"),
+      llm: "LLM",
+      tool: t("Tool", "工具"),
+    }[kind];
+    const accessibleLabel = `${kindLabel} · ${label}${span ? ` · ${statusLabel(span.state, language)}` : ""}`;
     return {
       id: row.id,
+      ariaLabel: accessibleLabel,
+      className: `observer-graph-card node-kind-${kind} ${row.kind !== "call" ? `graph-container ${closed ? "is-collapsed" : "is-expanded"}` : ""}`,
+      parentId: row.parentId,
+      extent: row.parentId ? "parent" : undefined,
+      zIndex: row.kind === "question" ? 0 : row.kind === "turn" ? 1 : 2,
       position: layout.positions.get(row.id)!,
       data: {
-        label: (
-          <div
-            className={`observer-tree-node ${span?.state ?? "group"}`}
-            tabIndex={span ? 0 : undefined}
-            role={span ? "button" : undefined}
-            aria-label={label}
-            onKeyDown={(event) => {
-              if (span && (event.key === "Enter" || event.key === " ")) {
-                event.preventDefault();
-                event.stopPropagation();
-                onSelect(span.id);
-              }
-            }}
-          >
-            <small>
-              {row.kind === "question"
-                ? t("QUESTION", "问题")
-                : row.kind === "turn"
-                  ? "TURN"
-                  : span?.kind === "llm"
-                    ? "LLM"
-                    : "TOOL"}
-            </small>
-            <strong title={label}>{label}</strong>
-            {span ? (
-              <>
-                <span>
-                  {t(
-                    (
-                      {
-                        running: "Running",
-                        completed: "Completed",
-                        failed: "Failed",
-                        cancelled: "Cancelled",
-                        interrupted: "Interrupted",
-                        unknown: "Unknown",
-                      } as const
-                    )[span.state],
-                    (
-                      {
-                        running: "运行中",
-                        completed: "完成",
-                        failed: "失败",
-                        cancelled: "已取消",
-                        interrupted: "记录中断",
-                        unknown: "未知",
-                      } as const
-                    )[span.state],
-                  )}{" "}
-                  · {span.estimated ? "≈ " : ""}
-                  {formatDuration(span.durationMs, language)}
+        label:
+          row.kind !== "call" ? (
+            <div className={`observer-container-heading container-${row.kind}`}>
+              <small className="observer-node-type">
+                <NodeIcon kind={kind} />
+                {kindLabel}
+              </small>
+              <strong title={label}>
+                {row.kind === "turn"
+                  ? scopedName(label, language, { question: true })
+                  : label}
+              </strong>
+              <span className="container-summary">
+                {calls.length} {t("calls", "个调用")} ·{" "}
+                {row.kind === "question"
+                  ? trace?.settled
+                    ? t("Settled", "已结束")
+                    : t("In progress", "进行中")
+                  : turn?.completed
+                    ? t("Completed", "完成")
+                    : t("In progress", "进行中")}
+              </span>
+              <button
+                className="nodrag nopan observer-node-toggle"
+                aria-label={
+                  closed ? t("Expand", "展开") : t("Collapse", "折叠")
+                }
+                aria-expanded={!closed}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  row.kind === "question"
+                    ? toggleQuestion(row.entityId)
+                    : onToggleTurn(row.entityId);
+                }}
+              >
+                {row.kind === "turn" || narrow
+                  ? closed
+                    ? "▸"
+                    : "▾"
+                  : closed
+                    ? t("Expand", "展开")
+                    : t("Collapse", "折叠")}
+              </button>
+            </div>
+          ) : (
+            <div
+              className={`observer-tree-node ${span?.state ?? "group"}`}
+              tabIndex={span ? 0 : undefined}
+              role={span ? "button" : undefined}
+              aria-label={accessibleLabel}
+              onKeyDown={(event) => {
+                if (span && (event.key === "Enter" || event.key === " ")) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelect(span.id);
+                }
+              }}
+            >
+              <div className="observer-node-heading">
+                <small className="observer-node-type">
+                  <NodeIcon kind={kind} />
+                  {kindLabel}
+                </small>
+                {span && (
+                  <span className={`observer-node-status status-${span.state}`}>
+                    <StatusIcon state={span.state} />
+                    {t(
+                      (
+                        {
+                          running: "Running",
+                          completed: "Completed",
+                          failed: "Failed",
+                          cancelled: "Cancelled",
+                          interrupted: "Interrupted",
+                          unknown: "Unknown",
+                        } as const
+                      )[span.state],
+                      (
+                        {
+                          running: "运行中",
+                          completed: "完成",
+                          failed: "失败",
+                          cancelled: "已取消",
+                          interrupted: "记录中断",
+                          unknown: "未知",
+                        } as const
+                      )[span.state],
+                    )}
+                  </span>
+                )}
+              </div>
+              <strong title={label}>
+                {scopedName(label, language, { question: true, turn: true })}
+              </strong>
+              <div className="observer-node-timing">
+                <span
+                  title={formatDuration(span?.durationMs ?? null, language)}
+                >
+                  {span?.estimated ? "≈ " : ""}
+                  {timeLabel(
+                    span?.id ?? row.id,
+                    span?.durationMs ?? null,
+                    span?.state !== "running",
+                  )}
                 </span>
                 <small title={formatTimestamp(timestamp, language)}>
                   {timestamp
@@ -177,53 +339,23 @@ export const Graph = memo(function Graph({
                       )
                     : t("Start not recorded", "起点未记录")}
                 </small>
-              </>
-            ) : (
-              <>
-                <span>
-                  {calls.length} {t("calls", "个调用")} ·{" "}
-                  {row.kind === "question"
-                    ? trace?.settled
-                      ? t("Settled", "已稳定")
-                      : t("In progress", "进行中")
-                    : turn?.completed
-                      ? t("Completed", "已结束")
-                      : t("In progress", "进行中")}
-                </span>
-                <button
-                  className="nodrag nopan"
-                  aria-expanded={!closed}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    row.kind === "question"
-                      ? toggleQuestion(row.entityId)
-                      : onToggleTurn(row.entityId);
-                  }}
-                >
-                  {closed ? t("Expand", "展开") : t("Collapse", "折叠")}
-                </button>
-              </>
-            )}
-          </div>
-        ),
+              </div>
+            </div>
+          ),
       },
       selected: row.entityId === selected,
-      sourcePosition: Position.Left,
+      sourcePosition: Position.Right,
       targetPosition: Position.Left,
       draggable: false,
       style: {
-        width: narrow ? 230 : 280,
-        height: 130,
+        width: layout.bounds.get(row.id)!.width,
+        height: layout.bounds.get(row.id)!.height,
         padding: 0,
-        borderRadius: 10,
-        background: "#14251f",
-        color: "#eefaf3",
+        borderRadius: "var(--node-radius)",
+        background: "var(--node-background)",
+        color: "var(--text)",
         borderColor:
-          row.entityId === selected
-            ? "#a2f9c6"
-            : row.kind === "question"
-              ? "#749d87"
-              : "#466756",
+          row.entityId === selected ? "var(--accent)" : "var(--node-border)",
       },
     };
   });
@@ -240,6 +372,7 @@ export const Graph = memo(function Graph({
     return id;
   };
   const edgeKeys = new Set<string>();
+  const resultLabels = new Set<string>();
   const edges: Edge[] = view.relations.flatMap((relation) => {
     const source = visibleId(relation.from),
       target = visibleId(relation.to),
@@ -252,33 +385,83 @@ export const Graph = memo(function Graph({
     )
       return [];
     edgeKeys.add(id);
+    const duplicateResultLabel =
+      relation.kind === "result-consumed" && resultLabels.has(target);
+    if (relation.kind === "result-consumed") resultLabels.add(target);
+    const from = layout.bounds.get(source)!;
+    const to = layout.bounds.get(target)!;
+    const fromRow = layout.rows.find((r) => r.id === source)!;
+    const question = layout.bounds.get(`prompt:${fromRow.traceId}`)!;
+    const color =
+      relation.kind === "calls"
+        ? "var(--node-llm)"
+        : relation.kind === "result-consumed"
+          ? "var(--node-tool)"
+          : "var(--muted)";
     return [
       {
         id,
         source,
         target,
-        type: "smoothstep",
-        label: t(
-          (
-            {
-              calls: "Calls",
-              "result-consumed": "Result consumed",
-              sequence: "Observed sequence",
-              contains: "Contains",
-            } as const
-          )[relation.kind],
-          (
-            {
-              calls: "调用",
-              "result-consumed": "结果输入",
-              sequence: "观测顺序",
-              contains: "包含",
-            } as const
-          )[relation.kind],
-        ),
-        labelStyle: { fill: "#b7d4c4", fontSize: 10 },
-        labelBgStyle: { fill: "#14251f" },
-        style: { stroke: "#6f9981", strokeDasharray: "3 4", opacity: 0.7 },
+        type: "observed",
+        zIndex: 3,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color,
+          width: 16,
+          height: 16,
+        },
+        data: {
+          route: {
+            right: question.x + question.width - 16,
+            bottom: from.y + from.height + 10,
+            top: to.y - 8,
+          },
+        },
+        label: duplicateResultLabel
+          ? undefined
+          : t(
+              (
+                {
+                  calls: "Calls",
+                  "result-consumed": "Result consumed",
+                  sequence: "Observed sequence",
+                  contains: "Contains",
+                } as const
+              )[relation.kind],
+              (
+                {
+                  calls: "调用",
+                  "result-consumed": "结果输入",
+                  sequence: "观测顺序",
+                  contains: "包含",
+                } as const
+              )[relation.kind],
+            ),
+        labelStyle: {
+          fill: "var(--muted)",
+          fontSize: "var(--font-caption)",
+          fontFamily: "var(--font-sans)",
+        },
+        labelBgStyle: { fill: "var(--surface)" },
+        style: {
+          stroke: color,
+          strokeWidth:
+            selected && (relation.from === selected || relation.to === selected)
+              ? 2.5
+              : 1.6,
+          opacity:
+            selected && relation.from !== selected && relation.to !== selected
+              ? 0.4
+              : 1,
+          strokeLinejoin: "round",
+          strokeDasharray:
+            relation.kind === "calls"
+              ? undefined
+              : relation.kind === "result-consumed"
+                ? "6 3"
+                : "2 4",
+        },
       },
     ];
   });
@@ -292,8 +475,8 @@ export const Graph = memo(function Graph({
       : nodes[0];
     if (node)
       void instance.current?.setCenter(
-        node.position.x + (narrow ? 115 : 140),
-        node.position.y + 65,
+        layout.bounds.get(node.id)!.x + layout.bounds.get(node.id)!.width / 2,
+        layout.bounds.get(node.id)!.y + layout.bounds.get(node.id)!.height / 2,
         { zoom: 1, duration: 0 },
       );
   };
@@ -307,23 +490,69 @@ export const Graph = memo(function Graph({
       <div className="graph-tools observer-tree-tools" ref={toolbar}>
         <span>
           {t(
-            "Scroll to explore · connectors show observed relationships",
-            "滚动查看 · 连线表示真实观测关系",
+            "Question groups · one turn per row · arrows show recorded relationships",
+            "问题容器 · 每个轮次一行 · 箭头表示已记录关系",
           )}
         </span>
-        <button
-          onClick={() => {
-            focus();
-            if (narrow)
-              toolbar.current?.parentElement?.scrollIntoView({
-                block: "center",
-                behavior: "instant",
-              });
-          }}
-          disabled={!nodes.length}
+        <div
+          className="graph-edge-legend"
+          aria-label={t("Relationship legend", "关系图例")}
         >
-          {t("Focus selected / active call", "聚焦所选 / 当前调用")}
-        </button>
+          <span className="legend-calls">{t("Calls", "调用")}</span>
+          <span className="legend-result">
+            {t("Result consumed", "结果输入")}
+          </span>
+        </div>
+        <div className="graph-actions">
+          <button
+            aria-label={t(
+              "Focus selected / active call",
+              "聚焦所选 / 当前调用",
+            )}
+            onClick={() => {
+              focus();
+              if (narrow)
+                toolbar.current?.parentElement?.scrollIntoView({
+                  block: "center",
+                  behavior: "instant",
+                });
+            }}
+            disabled={!nodes.length}
+          >
+            {narrow
+              ? t("Focus call", "聚焦调用")
+              : t("Focus selected / active call", "聚焦所选 / 当前调用")}
+          </button>
+          <div
+            className="graph-zoom"
+            role="group"
+            aria-label={t("Graph zoom", "画布缩放")}
+          >
+            <button
+              aria-label={t("Zoom in", "放大")}
+              title={t("Zoom in", "放大")}
+              onClick={() => void instance.current?.zoomIn()}
+            >
+              +
+            </button>
+            <button
+              aria-label={t("Zoom out", "缩小")}
+              title={t("Zoom out", "缩小")}
+              onClick={() => void instance.current?.zoomOut()}
+            >
+              −
+            </button>
+            <button
+              aria-label={t("Fit graph", "查看全图")}
+              title={t("Fit graph", "查看全图")}
+              onClick={() =>
+                void instance.current?.fitView({ padding: 0.15, maxZoom: 1 })
+              }
+            >
+              ⤢
+            </button>
+          </div>
+        </div>
       </div>
       <ReactFlow<Node, Edge>
         nodes={nodes.map((node) => ({
@@ -331,6 +560,7 @@ export const Graph = memo(function Graph({
           measured: measurements.get(node.id),
         }))}
         edges={edges}
+        edgeTypes={edgeTypes}
         onNodesChange={recordMeasurements}
         onNodeClick={(_, node) => {
           if (node.id.startsWith("prompt:")) toggleQuestion(node.id.slice(7));
@@ -338,7 +568,7 @@ export const Graph = memo(function Graph({
           else onSelect(node.id);
         }}
         panOnScroll
-        panOnScrollMode={PanOnScrollMode.Vertical}
+        panOnScrollMode={PanOnScrollMode.Free}
         zoomOnScroll={false}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -347,11 +577,10 @@ export const Graph = memo(function Graph({
           instance.current = flow;
         }}
         defaultViewport={{ x: narrow ? 12 : 40, y: 24, zoom: 1 }}
-        minZoom={0.25}
+        minZoom={0.05}
         maxZoom={2}
       >
-        <Background color="#30423c" />
-        <Controls showInteractive={false} />
+        <Background color="var(--grid)" />
       </ReactFlow>
     </>
   );

@@ -1,0 +1,32 @@
+/* Shared typography, dimensions and spacing; colors belong to theme.css. */
+:root {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  --font-body: 13px;
+  --font-caption: 12px;
+  --font-heading: 14px;
+  --font-brand: 16px;
+  --weight-medium: 500;
+  --weight-strong: 600;
+  --line-body: 20px;
+  --line-caption: 16px;
+  --line-label: 16px;
+  --control-height: 32px;
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-node: 8px;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+}
+@media (max-width: 767px) {
+  :root {
+    --control-height: 36px;
+  }
+}

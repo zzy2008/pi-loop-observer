@@ -1,0 +1,26 @@
+[
+  {
+    "viewport": "desktop",
+    "headerHeight": 52,
+    "graphTop": 212,
+    "graphHeight": 420,
+    "viewportWidth": 1440,
+    "pageWidth": 1440
+  },
+  {
+    "viewport": "mobile-390",
+    "headerHeight": 74.1875,
+    "graphTop": 317.1875,
+    "graphHeight": 480,
+    "viewportWidth": 390,
+    "pageWidth": 390
+  },
+  {
+    "viewport": "mobile-320",
+    "headerHeight": 74.1875,
+    "graphTop": 317.1875,
+    "graphHeight": 456,
+    "viewportWidth": 320,
+    "pageWidth": 320
+  }
+]

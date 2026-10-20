@@ -1,5 +1,6 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { TraceView } from "../../web/src/TraceView";
 import { Timeline } from "../../web/src/TimelineView";
 import { describe, expect, it } from "vitest";
 import { buildDisplayIndex, textSummary } from "../../web/src/display-model";
@@ -45,6 +46,16 @@ const span = (
   estimated: false,
 });
 describe("display timing", () => {
+  it("keeps observed positions separate from SDK execution duration", () => {
+    const call = {
+      ...span("sdk", 100, 900),
+      durationMs: 125,
+      executionDurationMs: 125,
+    };
+    expect(measureInterval([call]).durationMs).toBe(900);
+    expect(timelineRange([call], "clock")).toEqual({ min: 100, range: 900 });
+    expect(call.durationMs).toBe(125);
+  });
   it("uses independent question ranges and wall-clock union for concurrent calls", () => {
     const first = [span("a", 0, 1000), span("b", 500, 1000)];
     const second = [span("c", 3600000, 20)];
@@ -281,8 +292,8 @@ it("keeps the SVG scale and turn headings when calls are collapsed", () => {
     expect(html).toContain('data-turn-id="t2"');
     expect(html).toContain("Observed calls");
   }
-  expect(expanded).toContain('<rect x="610"');
-  expect(collapsed).not.toContain('<rect x="610"');
+  expect(expanded).toContain('data-span-id="late"');
+  expect(collapsed).not.toContain('data-span-id="late"');
   expect(collapsed).toContain("Collapsed");
   expect(expanded.indexOf('data-turn-id="t1"')).toBeLessThan(
     expanded.indexOf('role="button"'),
@@ -317,4 +328,32 @@ it("includes a running later question past the previous question endpoint", () =
   expect(
     measureOverview([span("other", 0, 10, "other")], [first]).durationMs,
   ).toBeNull();
+});
+
+it("labels time bars with the same observed duration used by their geometry", () => {
+  const view = project(initialState());
+  view.traces = [
+    { id: "q1", label: "question", kind: "normal", settled: true },
+  ];
+  view.spans = [
+    { ...span("sdk", 100, 900), durationMs: 125, executionDurationMs: 125 },
+  ];
+  const display = buildDisplayIndex(view, "en");
+  const common = {
+    view,
+    display,
+    collapsed: new Set<string>(),
+    onSelect: () => {},
+  };
+  const trace = renderToStaticMarkup(
+    React.createElement(TraceView, { ...common, onToggleTurn: () => {} }),
+  );
+  const timeline = renderToStaticMarkup(React.createElement(Timeline, common));
+  expect(trace).toMatch(/class="trace-duration"[^>]*>900 ms<\/span>/);
+  expect(timeline).toMatch(
+    /class="timeline-duration-label"[^>]*>900 ms<\/text>/,
+  );
+  // The separately labelled SDK measurement must remain available.
+  for (const html of [trace, timeline])
+    expect(html).toContain("Pi tool execution: 125 ms");
 });

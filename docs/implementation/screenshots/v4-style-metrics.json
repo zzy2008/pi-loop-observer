@@ -1,0 +1,287 @@
+{
+  "desktop": {
+    "typography": {
+      "fonts": {
+        "body": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "400",
+          "height": 1138,
+          "radius": "0px"
+        },
+        "header": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "session": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "search": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "picker": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "focus": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "replay": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 32,
+          "radius": "6px"
+        },
+        "node": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "600",
+          "height": 32,
+          "radius": "0px"
+        },
+        "caption": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 12,
+          "weight": "400",
+          "height": 18,
+          "radius": "6px"
+        },
+        "details": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 20,
+          "radius": "0px"
+        },
+        "timeline": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 20,
+          "radius": "0px"
+        }
+      },
+      "chart": {
+        "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": 12,
+        "actualSize": 12
+      }
+    },
+    "layout": {
+      "headerHeight": 52,
+      "graphTop": 208,
+      "graphHeight": 420,
+      "viewportWidth": 1440,
+      "pageWidth": 1440
+    }
+  },
+  "mobile-390": {
+    "typography": {
+      "fonts": {
+        "body": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "400",
+          "height": 830,
+          "radius": "0px"
+        },
+        "header": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "session": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "search": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "picker": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "focus": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 0,
+          "radius": "6px"
+        },
+        "replay": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "node": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "600",
+          "height": 0,
+          "radius": "0px"
+        },
+        "caption": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 12,
+          "weight": "400",
+          "height": 0,
+          "radius": "6px"
+        },
+        "details": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 0,
+          "radius": "0px"
+        },
+        "timeline": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 20,
+          "radius": "0px"
+        }
+      },
+      "chart": {
+        "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": 12,
+        "actualSize": 12
+      }
+    },
+    "layout": {
+      "headerHeight": 70,
+      "graphTop": 276,
+      "graphHeight": 480,
+      "viewportWidth": 390,
+      "pageWidth": 390
+    }
+  },
+  "mobile-320": {
+    "typography": {
+      "fonts": {
+        "body": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "400",
+          "height": 846,
+          "radius": "0px"
+        },
+        "header": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "session": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "search": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "picker": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "focus": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 0,
+          "radius": "6px"
+        },
+        "replay": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "500",
+          "height": 36,
+          "radius": "6px"
+        },
+        "node": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 13,
+          "weight": "600",
+          "height": 0,
+          "radius": "0px"
+        },
+        "caption": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 12,
+          "weight": "400",
+          "height": 0,
+          "radius": "6px"
+        },
+        "details": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 0,
+          "radius": "0px"
+        },
+        "timeline": {
+          "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          "size": 14,
+          "weight": "600",
+          "height": 20,
+          "radius": "0px"
+        }
+      },
+      "chart": {
+        "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": 12,
+        "actualSize": 12
+      }
+    },
+    "layout": {
+      "headerHeight": 70,
+      "graphTop": 276,
+      "graphHeight": 456,
+      "viewportWidth": 320,
+      "pageWidth": 320
+    }
+  }
+}

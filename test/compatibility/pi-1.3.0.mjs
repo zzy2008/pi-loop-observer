@@ -78,6 +78,9 @@ const observer = (pi) => {
     pi.on(type, (e, ctx) => {
       if (e.parentToolCallId)
         checks.push({ nestedType: type, parentToolCallId: e.parentToolCallId });
+      if (type === "tool_execution_end")
+        checks.push({ durationMs: e.durationMs });
+      if (type === "agent_settled") checks.push({ aborted: e.aborted });
       seen.push(type + (e.message ? ":" + e.message.role : ""));
       if (type === "input") checks.push({ inputKeys: Object.keys(e) });
       if (type === "message_end" && e.message.role === "assistant")
@@ -183,6 +186,10 @@ try {
   assert(checks.some((x) => x.parentToolCallId === "outer-call"));
   assert(checks.some((x) => x.inputKeys && !x.inputKeys.includes("inputId")));
   assert.equal(seen.at(-1), "agent_settled");
+  assert(
+    checks.some((x) => Number.isFinite(x.durationMs) && x.durationMs >= 0),
+  );
+  assert(checks.some((x) => x.aborted === false));
   console.log(JSON.stringify({ node: process.version, seen, checks }, null, 2));
 } finally {
   session.dispose();

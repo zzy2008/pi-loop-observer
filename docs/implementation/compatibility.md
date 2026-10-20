@@ -1,8 +1,23 @@
-# 首版 Pi 兼容性证据
+# Pi 兼容性证据
+
+## Pi 1.3.0 升级验证
+
+验证日期：2026-10-18，Node v24.18.1，开发依赖固定为 `@earendil-works/pi-coding-agent@1.3.0`。执行 `pnpm test:compat`，使用真实 SDK、隔离临时目录和人工 streamFunction；没有真实模型或收费 provider 请求。脚本为 `test/compatibility/pi-1.3.0.mjs`、`observer-sdk.mjs` 与 `observer-cancel-sdk.mjs`。
+
+- SDK 实际发送 `tool_execution_end.durationMs`（包括合法的零值），采集为可选 `span.ended.durationMs`，模型存为 `executionDurationMs`，工具投影优先使用这项实际执行耗时。观察起终点仍保留，供时间轴使用。负数、NaN、Infinity 不接受。
+- SDK 实际发送 `agent_settled.aborted:false`，采集保存显式布尔值并设 `outcomeKnown:true`；取消的 `true` 已由真实 SDK 的 `session.abort()` 覆盖，合成 stream 等待 AbortSignal 后返回 aborted；旧宿主缺字段由单元测试覆盖。`aborted:false` 只代表没有取消，不表示所有工具或模型都成功。
+- 老事实没有新增字段时继续使用同一 clock domain 的观察耗时；JSONL 导入及缺乏时间证据的历史仍为 unknown，不补造 SDK 耗时或取消状态。无需数据库迁移。
+- Pi 1.2 的 `before_agent_start` 返回联合类型不影响当前扩展：当前未订阅该事件。现有事件绑定、嵌套工具和独立持久服务路径继续经过实际 SDK 验证。
+
+`observer-cancel-sdk.mjs` 在单独临时目录与 SDK 子进程运行取消场景，得到 21 条事实、1 个 cancelled LLM span、5 条归档。SDK 发出 `agent_settled.aborted:true`，Observer 持久事实包含 `outcomeKnown:true` 与 `aborted:true`；HTTP 读取并重放得到 `Trace.aborted=true`，SDK 进程退出后再次读取持久历史并重放仍通过。该场景不改变正常完成路径的 44 条事实验收。
+
+以下保留首版 1.0.0 的历史验收记录；其中关于 run.settled 缺少结果的描述适用于旧宿主和旧事实。
+
+## 首版 Pi 1.0.0 兼容性证据
 
 验证日期：2026-10-04。实际宿主 `@earendil-works/pi-coding-agent@1.0.0`；macOS，Node v24.18.1。只读取安装包源码/类型，所有运行测试使用临时 cwd、临时 agentDir、内存 SessionManager、人工消息及工具。没有读取用户 session 或凭据，没有真实 LLM / HTTP provider 请求。
 
-可重复命令：
+首版验收使用的命令（脚本现已升级为 `pi-1.3.0.mjs`，当前请执行 `pnpm test:compat`）：
 
 ```sh
 pnpm exec vitest run test/unit/capture.test.ts test/unit/adapter.test.ts

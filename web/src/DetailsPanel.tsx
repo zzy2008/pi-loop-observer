@@ -5,7 +5,12 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import type { ProjectedSpan, Projection } from "../../src/model/index.js";
+import type {
+  ProjectedSpan,
+  Projection,
+  Trace,
+  Turn,
+} from "../../src/model/index.js";
 import {
   statusLabel,
   stageLabel,
@@ -14,7 +19,7 @@ import {
 } from "./presentation";
 import { useI18n, errorMessage } from "./i18n";
 import { nameOf, type DisplayIndex } from "./display-model";
-import { formatTimestamp } from "./timing";
+import { formatTimestamp, formatDuration, measureBoundary } from "./timing";
 import { loadPayload } from "./client";
 function PayloadView({
   id,
@@ -90,16 +95,72 @@ function PayloadView({
 }
 export function Details({
   span,
+  entity,
+  relatedSpans = [],
+  onSelect,
   display,
   sessionKey,
   cursor,
 }: {
   span?: ProjectedSpan;
+  entity?: Trace | Turn;
+  relatedSpans?: ProjectedSpan[];
+  onSelect?: (id: string) => void;
   display: DisplayIndex;
   sessionKey: string;
   cursor: string;
 }) {
   const { language, t } = useI18n();
+  if (entity) {
+    const trace = "settled" in entity ? entity : undefined;
+    return (
+      <aside className="details">
+        <small>{trace ? t("Question", "问题") : t("Turn", "轮次")}</small>
+        <h2>{nameOf(display, entity.id, entity.id)}</h2>
+        <dl>
+          <dt>{t("Status", "状态")}</dt>
+          <dd>
+            {trace
+              ? trace.aborted === true
+                ? t("Cancelled", "已取消")
+                : trace.settled
+                  ? t("Settled", "已结束")
+                  : t("Not settled", "未结束")
+              : (entity as Turn).completed
+                ? t("Completed", "完成")
+                : t("Not finished", "未结束")}
+          </dd>
+          <dt>{t("Duration", "耗时")}</dt>
+          <dd>{formatDuration(measureBoundary(entity), language)}</dd>
+          <dt>{t("Start", "开始")}</dt>
+          <dd>{formatTimestamp(entity.start, language)}</dd>
+          <dt>{t("End", "结束")}</dt>
+          <dd>{formatTimestamp(entity.end, language)}</dd>
+          <dt>{t("Calls", "调用")}</dt>
+          <dd>{relatedSpans.length}</dd>
+        </dl>
+        {trace?.contentRef && (
+          <>
+            <h3>{t("Prompt", "提问")}</h3>
+            <PayloadView
+              id={trace.contentRef}
+              sessionKey={sessionKey}
+              cursor={cursor}
+              empty={t("Not recorded", "未记录")}
+            />
+          </>
+        )}
+        <h3>{t("Calls", "调用")}</h3>
+        <div className="detail-call-list">
+          {relatedSpans.map((call) => (
+            <button key={call.id} onClick={() => onSelect?.(call.id)}>
+              {nameOf(display, call.id, call.name)}
+            </button>
+          ))}
+        </div>
+      </aside>
+    );
+  }
   if (!span)
     return (
       <aside className="details">
@@ -125,6 +186,12 @@ export function Details({
         <dd>{statusLabel(span.state, language)}</dd>
         <dt>{t("Duration", "耗时")}</dt>
         <dd>{duration(span, language)}</dd>
+        {span.executionDurationMs != null && (
+          <>
+            <dt>{t("Timing", "计时来源")}</dt>
+            <dd>{t("Pi tool execution", "Pi 工具执行耗时")}</dd>
+          </>
+        )}
         <dt>{t("Start", "开始")}</dt>
         <dd>{formatTimestamp(span.start, language)}</dd>
         <dt>{t("End", "结束")}</dt>

@@ -90,3 +90,28 @@ export const nameOf = (
   id: string,
   fallback: string,
 ) => display?.names[id] ?? fallback;
+
+/** Human-readable labels inside known containers; canonical names remain unchanged. */
+export function scopedName(
+  label: string,
+  language: Language,
+  scope: { question?: boolean; turn?: boolean } = {},
+): string {
+  const parts = /^(?:(Q\d+)\.)?(?:T(\d+)(?:\.C(\d+))?|C(\d+)) · (.*)$/.exec(
+    label,
+  );
+  if (!parts) return label;
+  const [, question, turn, nestedCall, directCall, description] = parts;
+  const call = nestedCall ?? directCall;
+  const prefix = [
+    question && !scope.question ? question : undefined,
+    turn && (!scope.turn || !call)
+      ? `${language === "zh" ? "轮次" : "Turn"} ${turn}`
+      : undefined,
+    call ? `${language === "zh" ? "调用" : "Call"} ${call}` : undefined,
+  ].filter(Boolean);
+  // Turn rows already carry their complete type and number in the prefix.
+  if (call || !/^(?:Turn|轮次) \d+$/.test(description!))
+    prefix.push(description);
+  return prefix.join(" · ");
+}

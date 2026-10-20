@@ -90,6 +90,8 @@ export type Fact =
       spanId: string;
       outcome: Exclude<SpanState, "running">;
       contentRef?: PayloadRef;
+      /** Public SDK tool execution duration, when supplied by the host. */
+      durationMs?: number;
     }
   | {
       type: "message.finalized";
@@ -125,7 +127,12 @@ export type Fact =
       oldLeafId?: string | null;
       newLeafId: string | null;
     }
-  | { type: "run.settled"; runId?: string; outcomeKnown: boolean }
+  | {
+      type: "run.settled";
+      runId?: string;
+      outcomeKnown: boolean;
+      aborted?: boolean;
+    }
   | {
       type: "capture.gap";
       scope: string;
@@ -169,6 +176,7 @@ export type Span = {
   inputCursor?: Cursor;
   outputRef?: PayloadRef;
   outputCursor?: Cursor;
+  executionDurationMs?: number;
   source: Source;
   entryKey?: string;
   model?: string;
@@ -182,6 +190,7 @@ export type Trace = {
   kind: string;
   contentRef?: PayloadRef;
   settled: boolean;
+  aborted?: boolean;
 };
 export type Turn = {
   start?: ObservedTime;
@@ -419,6 +428,14 @@ export function reduce(
         ...old,
         end: event.source === "pi-import" ? undefined : event.observedAt,
         state: fact.outcome,
+        executionDurationMs:
+          old.kind === "tool" &&
+          event.source !== "pi-import" &&
+          typeof fact.durationMs === "number" &&
+          Number.isFinite(fact.durationMs) &&
+          fact.durationMs >= 0
+            ? fact.durationMs
+            : undefined,
         outputRef: fact.contentRef ?? old.outputRef,
         outputCursor: fact.contentRef ? event.cursor : old.outputCursor,
         quality: {
@@ -534,6 +551,9 @@ export function reduce(
             ? {
                 ...t,
                 settled: true,
+                ...(typeof fact.aborted === "boolean"
+                  ? { aborted: fact.aborted }
+                  : {}),
                 end:
                   event.source !== "pi-import" &&
                   (event.refs.traceId === id ||
@@ -651,9 +671,9 @@ export function project(
         endpoint.monoMs !== null;
       return {
         ...s,
-        durationMs: measured
-          ? Math.max(0, endpoint!.monoMs! - s.start!.monoMs!)
-          : null,
+        durationMs:
+          s.executionDurationMs ??
+          (measured ? Math.max(0, endpoint!.monoMs! - s.start!.monoMs!) : null),
         estimated: !s.end && !!measured,
       };
     });

@@ -27,6 +27,8 @@ export type PiObservation = {
   args?: unknown;
   result?: unknown;
   isError?: boolean;
+  durationMs?: number;
+  aborted?: boolean;
   messageEntryId?: string;
   toolResultEntryIds?: string[];
   oldLeafId?: string | null;
@@ -302,6 +304,11 @@ export class CaptureEngine {
                   type: "span.ended",
                   spanId,
                   outcome: event.isError ? "failed" : "completed",
+                  ...(typeof event.durationMs === "number" &&
+                  Number.isFinite(event.durationMs) &&
+                  event.durationMs >= 0
+                    ? { durationMs: event.durationMs }
+                    : {}),
                 },
                 { spanId, toolCallId: event.toolCallId },
                 event.result,
@@ -369,7 +376,10 @@ export class CaptureEngine {
           this.emit({
             type: "run.settled",
             runId: this.runId,
-            outcomeKnown: false,
+            outcomeKnown: typeof event.aborted === "boolean",
+            ...(typeof event.aborted === "boolean"
+              ? { aborted: event.aborted }
+              : {}),
           });
           break;
         case "session_tree":

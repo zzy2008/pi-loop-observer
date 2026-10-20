@@ -1,0 +1,123 @@
+/* Geometry and axis must update in the same frame. Animate decoration only. */
+.workspace .trace-bar {
+  transition: background-color 180ms ease;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.workspace .timeline-duration-bar,
+.workspace .timeline-running-stream {
+  transition: fill-opacity 140ms ease;
+}
+.workspace .trace-running .trace-bar {
+  opacity: 1;
+  outline: 1px solid color-mix(in srgb, var(--text) 25%, transparent);
+  outline-offset: 1px;
+}
+.trace-running .trace-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    color-mix(in srgb, var(--text) 40%, transparent) 50%,
+    transparent 85%
+  );
+  animation: observer-sheen 1.6s linear infinite;
+  pointer-events: none;
+}
+.trace-running .trace-bar::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: 2px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--text);
+  animation: observer-breathe 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.trace-running .trace-select small::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-right: 4px;
+  background: var(--running);
+  animation: observer-breathe 1.6s ease-in-out infinite;
+}
+.timeline-running-stream {
+  animation: observer-flow 1.6s linear infinite;
+  pointer-events: none;
+}
+.timeline-running-tip {
+  animation: observer-breathe 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.workspace[data-motion="replay"] .trace-bar,
+.workspace[data-motion="replay"] .timeline-duration-bar {
+  animation: observer-arrive 180ms ease-out;
+}
+.workspace[data-motion="paused"] .trace-bar,
+.workspace[data-motion="paused"] .timeline-duration-bar,
+.workspace[data-motion="paused"] .timeline-running-stream,
+.workspace[data-motion="paused"] .timeline-running-tip {
+  transition: none;
+}
+.workspace[data-motion="paused"] .trace-bar::before,
+.workspace[data-motion="paused"] .trace-bar::after,
+.workspace[data-motion="paused"] .trace-select small::before,
+.workspace[data-motion="paused"] .timeline-running-stream,
+.workspace[data-motion="paused"] .timeline-running-tip {
+  animation-play-state: paused;
+}
+@keyframes observer-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes observer-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+@keyframes observer-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+@keyframes observer-arrive {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace .trace-bar,
+  .workspace .timeline-duration-bar,
+  .workspace .timeline-running-stream,
+  .workspace .timeline-running-tip {
+    transition: none !important;
+    animation: none !important;
+  }
+  .workspace .trace-bar::before,
+  .workspace .trace-bar::after,
+  .workspace .trace-select small::before {
+    animation: none !important;
+  }
+  .workspace .trace-bar::before,
+  .workspace .timeline-running-stream {
+    opacity: 0;
+  }
+}

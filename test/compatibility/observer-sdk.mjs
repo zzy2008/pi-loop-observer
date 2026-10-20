@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+const cancellation = process.env.PI_OBSERVER_TEST_CANCEL === "1";
 // Parent checks the archive after the real SDK process has exited.
 if (!process.env.PI_OBSERVER_SDK_WORKER) {
   const workspace = await mkdtemp(join(tmpdir(), "observer-sdk-process-"));
@@ -58,6 +59,14 @@ if (!process.env.PI_OBSERVER_SDK_WORKER) {
     const { events } = await response.json();
     assert.equal(events.length, result.eventCount);
     assert(events.some((event) => event.fact.type === "capture.stopped"));
+    if (cancellation) {
+      const { replay } = await import("../../dist/model/index.js");
+      assert(
+        Object.values(replay(events).traces).some(
+          (trace) => trace.aborted === true,
+        ),
+      );
+    }
     console.log(
       JSON.stringify(
         {
@@ -207,6 +216,9 @@ const observer = (pi) => {
     pi.on(type, (e, ctx) => {
       if (e.parentToolCallId)
         checks.push({ nestedType: type, parentToolCallId: e.parentToolCallId });
+      if (type === "tool_execution_end")
+        checks.push({ durationMs: e.durationMs });
+      if (type === "agent_settled") checks.push({ aborted: e.aborted });
       seen.push(type + (e.message ? ":" + e.message.role : ""));
       if (type === "input") checks.push({ inputKeys: Object.keys(e) });
       if (type === "message_end" && e.message.role === "assistant")
@@ -267,7 +279,11 @@ const { session } = await createAgentSession({
 });
 await session.bindExtensions({ mode: "print" });
 let call = 0;
-session.agent.streamFunction = () => {
+let streamReady;
+const ready = new Promise((resolve) => {
+  streamReady = resolve;
+});
+session.agent.streamFunction = (_model, _context, options) => {
   const s = new AssistantMessageEventStream();
   const message = {
     role: "assistant",
@@ -289,6 +305,22 @@ session.agent.streamFunction = () => {
     stopReason: call === 1 ? "toolUse" : "stop",
     timestamp: Date.now(),
   };
+  if (cancellation) {
+    const abort = () => {
+      const error = {
+        ...message,
+        content: [],
+        stopReason: "aborted",
+        errorMessage: "synthetic cancellation",
+      };
+      s.push({ type: "error", reason: "aborted", error });
+      s.end(error);
+    };
+    options.signal.addEventListener("abort", abort, { once: true });
+    if (options.signal.aborted) abort();
+    streamReady();
+    return s;
+  }
   queueMicrotask(() => {
     s.push({ type: "start", partial: { ...message, content: [] } });
     s.push({ type: "text_start", contentIndex: 0, partial: message });
@@ -304,14 +336,30 @@ session.agent.streamFunction = () => {
   return s;
 };
 try {
-  await session.prompt("synthetic input");
-  assert(checks.some((x) => x.messageEndPersisted === false));
-  assert(
-    checks.filter((x) => x.resolvable !== undefined).every((x) => x.resolvable),
-  );
-  assert(checks.some((x) => x.parentToolCallId === "outer-call"));
-  assert(checks.some((x) => x.inputKeys && !x.inputKeys.includes("inputId")));
-  assert.equal(seen.at(-1), "agent_settled");
+  const pending = session.prompt("synthetic input");
+  if (cancellation) {
+    await ready;
+    await session.abort();
+  }
+  await pending;
+  if (cancellation) {
+    assert(checks.some((x) => x.aborted === true));
+    assert.equal(seen.at(-1), "agent_settled");
+  } else {
+    assert(checks.some((x) => x.messageEndPersisted === false));
+    assert(
+      checks
+        .filter((x) => x.resolvable !== undefined)
+        .every((x) => x.resolvable),
+    );
+    assert(checks.some((x) => x.parentToolCallId === "outer-call"));
+    assert(checks.some((x) => x.inputKeys && !x.inputKeys.includes("inputId")));
+    assert.equal(seen.at(-1), "agent_settled");
+    assert(
+      checks.some((x) => Number.isFinite(x.durationMs) && x.durationMs >= 0),
+    );
+    assert(checks.some((x) => x.aborted === false));
+  }
   assert.equal(browserOpens, 0, "recording must not open a browser");
   // Finish the official shutdown callback, then query the still-independent service.
   await session.extensionRunner.emit({
@@ -342,22 +390,51 @@ try {
   const { events } = await response.json();
   const state = modelContracts.replay(events);
   const view = modelContracts.project(state);
-  assert.equal(view.spans.filter((span) => span.kind === "llm").length, 2);
-  assert.equal(view.spans.filter((span) => span.kind === "tool").length, 2);
-  assert(view.spans.every((span) => span.state === "completed"));
-  assert(events.some((event) => event.fact.type === "capture.stopped"));
-  assert.equal(
-    events.filter((event) => event.fact.type === "entity.bound").length,
-    3,
-  );
-  assert(view.spans.every((span) => span.quality.timing === "measured"));
-  assert(
-    view.relations.some((edge) => edge.evidence === "public parentToolCallId"),
-  );
+  if (cancellation) {
+    assert(
+      events.some(
+        (event) =>
+          event.fact.type === "run.settled" &&
+          event.fact.outcomeKnown &&
+          event.fact.aborted === true,
+      ),
+    );
+    assert.equal(view.traces.length, 1);
+    assert.equal(view.traces[0].aborted, true);
+    assert(view.spans.some((span) => span.state === "cancelled"));
+  } else {
+    assert.equal(view.spans.filter((span) => span.kind === "llm").length, 2);
+    assert.equal(view.spans.filter((span) => span.kind === "tool").length, 2);
+    assert(view.spans.every((span) => span.state === "completed"));
+    assert(
+      view.spans
+        .filter((span) => span.kind === "tool")
+        .every((span) => Number.isFinite(span.executionDurationMs)),
+    );
+    assert(
+      events.some(
+        (event) =>
+          event.fact.type === "run.settled" &&
+          event.fact.outcomeKnown &&
+          event.fact.aborted === false,
+      ),
+    );
+    assert(events.some((event) => event.fact.type === "capture.stopped"));
+    assert.equal(
+      events.filter((event) => event.fact.type === "entity.bound").length,
+      3,
+    );
+    assert(view.spans.every((span) => span.quality.timing === "measured"));
+    assert(
+      view.relations.some(
+        (edge) => edge.evidence === "public parentToolCallId",
+      ),
+    );
+  }
   const archived = events.filter(
     (event) => event.fact.type === "entry.archived",
   );
-  assert(archived.length >= 4);
+  assert(archived.length >= (cancellation ? 2 : 4));
   await obsCommand.handler("", observerContext);
   assert.equal(browserOpens, 1);
   await writeFile(
@@ -365,9 +442,11 @@ try {
     JSON.stringify({
       node: process.version,
       eventCount: events.length,
-      llmSpans: 2,
-      toolSpans: 2,
-      bindings: 3,
+      llmSpans: view.spans.filter((span) => span.kind === "llm").length,
+      toolSpans: view.spans.filter((span) => span.kind === "tool").length,
+      bindings: events.filter((event) => event.fact.type === "entity.bound")
+        .length,
+      ...(cancellation ? { aborted: true } : {}),
       browserOpens,
       independentServiceAfterSdkDispose: true,
       archivedEntries: archived.length,

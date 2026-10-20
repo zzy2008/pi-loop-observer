@@ -39,13 +39,24 @@ export function formatTimestamp(
     timeZoneName: "short",
   }).format(ms);
 }
+export function observedEnd(span: ProjectedSpan): number | null {
+  if (
+    span.quality.timing === "unknown" ||
+    span.start?.monoMs == null ||
+    !span.start.clockId
+  )
+    return null;
+  if (span.end?.clockId === span.start.clockId && span.end.monoMs != null)
+    return Math.max(span.start.monoMs, span.end.monoMs);
+  return span.durationMs == null ? null : span.start.monoMs + span.durationMs;
+}
 export function measureInterval(spans: readonly ProjectedSpan[]) {
   const known = spans.filter(
     (s) =>
       s.quality.timing !== "unknown" &&
       s.start?.clockId &&
       s.start.monoMs != null &&
-      s.durationMs != null,
+      observedEnd(s) != null,
   );
   const clocks = new Set(known.map((s) => s.start!.clockId));
   if (!known.length || known.length !== spans.length || clocks.size !== 1)
@@ -59,10 +70,10 @@ export function measureInterval(spans: readonly ProjectedSpan[]) {
     a.start!.monoMs! < b.start!.monoMs! ? a : b,
   );
   const last = known.reduce((a, b) =>
-    a.start!.monoMs! + a.durationMs! > b.start!.monoMs! + b.durationMs! ? a : b,
+    observedEnd(a)! > observedEnd(b)! ? a : b,
   );
   return {
-    durationMs: last.start!.monoMs! + last.durationMs! - first.start!.monoMs!,
+    durationMs: observedEnd(last)! - first.start!.monoMs!,
     start: first.start,
     end: last.end,
     estimated: known.some((s) => s.estimated),
@@ -107,7 +118,7 @@ export function timelineRange(
   );
   const max = Math.max(
     ...ends.map((t) => t!.monoMs!),
-    ...calls.map((s) => s.start!.monoMs! + (s.durationMs ?? 0)),
+    ...calls.map((s) => observedEnd(s) ?? s.start!.monoMs!),
   );
   return { min, range: Math.max(1, max - min) };
 }
@@ -136,4 +147,33 @@ export function measureOverview(
     observed: true,
     estimated: interval.estimated,
   };
+}
+
+/** Labels beside a bar must use exactly the observed interval that sets its width. */
+export function timeBarDuration(
+  span: ProjectedSpan,
+  language: Language = "en",
+): string {
+  const end = observedEnd(span);
+  const ms =
+    end == null || span.start?.monoMs == null ? null : end - span.start.monoMs;
+  const prefix =
+    ms != null && span.estimated ? (language === "zh" ? "约 " : "~ ") : "";
+  return prefix + formatDuration(ms, language);
+}
+export function timeBarDescription(
+  span: ProjectedSpan,
+  language: Language = "en",
+): string {
+  const observed = `${language === "zh" ? "观测耗时" : "Observed duration"}: ${timeBarDuration(span, language)}`;
+  return span.executionDurationMs == null
+    ? observed
+    : `${observed} · ${language === "zh" ? "Pi 工具执行耗时" : "Pi tool execution"}: ${formatDuration(span.executionDurationMs, language)}`;
+}
+
+/** Expand a running axis only at readable boundaries instead of changing every frame. */
+export function runningAxisRange(range: number): number {
+  const value = Math.max(1000, range);
+  const power = 10 ** Math.floor(Math.log10(value));
+  return [1, 2, 5, 10].find((step) => step * power >= value)! * power;
 }
